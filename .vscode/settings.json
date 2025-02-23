@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.asm": "assembly",
+        "*.html": "html",
+        "*.sh": "shellscript",
+        "ipc.h": "c"
+    }
+}
