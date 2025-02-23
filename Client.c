@@ -24,10 +24,18 @@ char prompt[10] = "> ";
 
 void *listen_for_shutdown(void *arg)
 {
-
+    Message msg;
     while (1)
     {
-        sleep(1);
+        if (msgrcv(response_msg_queue, &msg, sizeof(Message) - sizeof(long), 0, 0) != -1)
+        {
+            if (strcmp(msg.command, "SHUTDOWN") == 0)
+            {
+                printf("[Main Thread]: Server shutdown received. Exiting...\n");
+                printf("%s\n", msg.command);
+                exit(0);
+            }
+        }
     }
     return NULL;
 }
@@ -59,6 +67,11 @@ void receive_response()
         perror("msgrcv response");
         return;
     }
+    // if(strcmp(msg.command, "SHUTDOWN") == 0)
+    // {
+    //     printf("[Main Thread -- %lu] Server is shutting down. Exiting...\n", pthread_self());
+    //     exit(0);
+    // }
 
     printf("[Main Thread -- %lu] Received response from server\n=====================================================================\n%s\n", pthread_self(), msg.command);
 }

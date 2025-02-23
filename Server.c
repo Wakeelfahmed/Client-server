@@ -39,7 +39,7 @@ void register_client(pid_t pid)
         clients[client_count].pid = pid;
         clients[client_count].hidden = 0;
         client_count++;
-        printf("[Child Thread]: Registered client (PID: %d). Total clients: %d\n", pid, client_count);
+        printf("\n[Child Thread * %lu]: Registered client (PID: %d). Total clients: %d\n", pthread_self(), pid, client_count);
     }
     else
     {
@@ -67,7 +67,6 @@ void list_clients(pid_t client_pid)
     char full_list[1024] = ""; // Buffer to hold the client list
     char client_info[1024];    // Buffer for individual client information
 
-    printf("[Child Thread]: Sending client list to PID: %d\n", client_pid);
     for (int i = 0; i < client_count; i++)
     {
         if (!clients[i].hidden)
@@ -152,6 +151,7 @@ void *handle_client(void *arg)
     }
     else if (strcmp(msg.command, "LIST") == 0)
         list_clients(msg.client_pid);
+
     else if (strcmp(msg.command, "HIDE") == 0)
         hide_client(msg.client_pid);
     else if (strcmp(msg.command, "UNHIDE") == 0)
@@ -163,16 +163,27 @@ void *handle_client(void *arg)
         printf("[Child Thread]: Invalid command received: %s\n", msg.command);
         send_response(msg.client_pid, "Invalid command.");
     }
-
-    printf("[Main Thread -- %lu]: The child thread [ %lu ] successfully exited\n", pthread_self(), pthread_self());
     pthread_exit(NULL); // Exit the child thread
 }
 
 void shutdown_server(int signo)
 {
+    printf("----------------------------------------------------------------------------------------------------------\n");
+    printf("[Main Thread -- %lu]: Signal 2 received...\n", pthread_self());
+    printf("[Main Thread -- %lu]: Grecefully exiting...\n", pthread_self());
+    printf("[Main Thread -- %lu]: Cleaning up server and client resources...\n", pthread_self());
+    printf("[Main Thread -- %lu]: Broadcasting 'SHUTDOWN' message to all the clients...\n", pthread_self());
+    pthread_mutex_lock(&lock);
+    for (int i = 0; i < client_count; i++)
+        send_response(clients[i].pid, "SHUTDOWN");
+
+    pthread_mutex_unlock(&lock);
+
+    sleep(2); // Give clients time to process the message
+
     msgctl(server_msg_queue, IPC_RMID, NULL);
-    msgctl(response_msg_queue, IPC_RMID, NULL); // Remove response queue
-    printf("[Main Thread]: Server shutting down...\n");
+    msgctl(response_msg_queue, IPC_RMID, NULL);
+    printf("[Main Thread -- %lu]: Shutting down...\n", pthread_self());
     exit(0);
 }
 
@@ -204,7 +215,7 @@ int main()
             continue;
         }
 
-        printf("\n[Main Thread]: Received command '%s' from client (PID: %d). About to create a child thread.\n", msg.command, msg.client_pid);
+        printf("\n[Main Thread -- %lu]: Received command '%s' from client (PID: %d). About to create a child thread.\n", pthread_self(), msg.command, msg.client_pid);
 
         pthread_t thread;
         Message *msg_copy = malloc(sizeof(Message));
@@ -214,6 +225,8 @@ int main()
         printf("[Main Thread -- %lu]: Successfully created the child thread [%lu]\n", pthread_self(), thread);
 
         pthread_detach(thread);
+
+        printf("[Main Thread -- %lu]: The child thread [ %lu ] successfully exited\n", pthread_self(), thread);
     }
 
     return 0;
