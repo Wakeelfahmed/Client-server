@@ -3,6 +3,8 @@
         "*.asm": "assembly",
         "*.html": "html",
         "*.sh": "shellscript",
-        "ipc.h": "c"
+        "ipc.h": "c",
+        "mqueue.h": "c",
+        "stdlib.h": "c"
     }
 }
